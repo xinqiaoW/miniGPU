@@ -1,0 +1,13 @@
+# compile verilog/system verilog design source files
+sv xil_defaultlib  --include "D:/2025.1/Vivado/data/rsb/busdef" \
+"../../../../project_1.srcs/sources_1/new/adder.sv" \
+"../../../../project_1.srcs/sources_1/new/fp_16_to_32.sv" \
+"../../../../project_1.srcs/sources_1/new/multiplier.sv" \
+"../../../../project_1.srcs/sources_1/new/tensorcore.sv" \
+"../../../../project_1.srcs/sim_1/new/sim_tensorcore.sv" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

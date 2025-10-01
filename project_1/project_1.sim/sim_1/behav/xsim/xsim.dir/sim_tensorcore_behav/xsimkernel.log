@@ -1,0 +1,7 @@
+Running: xsim.dir/sim_tensorcore_behav/xsimk.exe -simmode gui -wdb sim_tensorcore_behav.wdb -simrunnum 0 -socket 65375
+Design successfully loaded
+Design Loading Memory Usage: 10504 KB (Peak: 10504 KB)
+Design Loading CPU Usage: 15 ms
+Simulation completed
+Simulation Memory Usage: 11572 KB (Peak: 11572 KB)
+Simulation CPU Usage: 30 ms

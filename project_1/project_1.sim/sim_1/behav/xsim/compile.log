@@ -1,0 +1,17 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/www/project_1/project_1.srcs/sources_1/new/adder.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module adder
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/www/project_1/project_1.srcs/sources_1/new/fp_16_to_32.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module fp_16_to_32
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/www/project_1/project_1.srcs/sources_1/new/multiplier.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module multiplier
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/www/project_1/project_1.srcs/sources_1/new/tensorcore.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module tensorcore
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module sim_tensorcore
+WARNING: [VRFC 10-9031] illegal cast without ' [C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv:147]
+WARNING: [VRFC 10-9031] illegal cast without ' [C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv:154]
+WARNING: [VRFC 10-9031] illegal cast without ' [C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv:175]
+WARNING: [VRFC 10-9031] illegal cast without ' [C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv:190]
+WARNING: [VRFC 10-3824] variable 'x' must explicitly be declared as automatic or static [C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv:175]
+WARNING: [VRFC 10-3824] variable 'x' must explicitly be declared as automatic or static [C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv:190]
+WARNING: [VRFC 10-3824] variable 'x' must explicitly be declared as automatic or static [C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv:204]

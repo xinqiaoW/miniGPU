@@ -1,0 +1,12 @@
+0.7
+2020.2
+May 22 2025
+00:13:55
+C:/Users/www/project_1/project_1.sim/sim_1/behav/xsim/glbl.v,1741209010,verilog,,,,glbl,,uvm,,,,,,
+C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_adder.sv,1754744129,systemVerilog,,,,sim_adder,,uvm,D:/2025.1/Vivado/data/rsb/busdef,,,,,
+C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_multiplier.sv,1754746006,systemVerilog,,,,sim_multiplier,,uvm,D:/2025.1/Vivado/data/rsb/busdef,,,,,
+C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv,1754925597,systemVerilog,,,,sim_tensorcore,,uvm,D:/2025.1/Vivado/data/rsb/busdef,,,,,
+C:/Users/www/project_1/project_1.srcs/sources_1/new/adder.sv,1754791911,systemVerilog,C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv;C:/Users/www/project_1/project_1.srcs/sources_1/new/fp_16_to_32.sv;C:/Users/www/project_1/project_1.srcs/sources_1/new/multiplier.sv;C:/Users/www/project_1/project_1.srcs/sources_1/new/tensorcore.sv,C:/Users/www/project_1/project_1.srcs/sources_1/new/fp_16_to_32.sv,,$unit_adder_sv_1680186848;adder,,uvm,D:/2025.1/Vivado/data/rsb/busdef,,,,,
+C:/Users/www/project_1/project_1.srcs/sources_1/new/fp_16_to_32.sv,1754793088,systemVerilog,,C:/Users/www/project_1/project_1.srcs/sources_1/new/multiplier.sv,,fp_16_to_32,,uvm,D:/2025.1/Vivado/data/rsb/busdef,,,,,
+C:/Users/www/project_1/project_1.srcs/sources_1/new/multiplier.sv,1754795243,systemVerilog,C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv;C:/Users/www/project_1/project_1.srcs/sources_1/new/tensorcore.sv,C:/Users/www/project_1/project_1.srcs/sources_1/new/tensorcore.sv,,multiplier,,uvm,D:/2025.1/Vivado/data/rsb/busdef,,,,,
+C:/Users/www/project_1/project_1.srcs/sources_1/new/tensorcore.sv,1754794270,systemVerilog,C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv,C:/Users/www/project_1/project_1.srcs/sim_1/new/sim_tensorcore.sv,,tensorcore,,uvm,D:/2025.1/Vivado/data/rsb/busdef,,,,,
