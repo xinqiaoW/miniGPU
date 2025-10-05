@@ -7,6 +7,8 @@ module lsu (
     input wire reset,
     input wire enable,
 
+    input reg [2:0] core_state,
+
     input wire mem_read_enable,
     input wire mem_write_enable,
     input wire [7:0] rs,
@@ -42,8 +44,9 @@ module lsu (
             if (mem_read_enable) begin 
                 case (lsu_state)
                     IDLE: begin
-                        //当gpu要请求数据时？？？
-                        lsu_state <= REQUESTING;
+                        if (core_state == 3'b011) begin // core_state = REQUEST
+                            lsu_state <= REQUESTING;
+                        end
                     end
                     REQUESTING: begin 
                         mem_read_valid <= 1;
@@ -58,16 +61,18 @@ module lsu (
                         end
                     end
                     DONE: begin 
-                        //当gpu要求新的操作时，状态机回到IDLE？？？？
-                        lsu_state <= IDLE;
+                        if (core_state == 3'b110) begin // core_state = UPDATE
+                            lsu_state <= IDLE;
+                        end
                     end
                 endcase
             end
             if (mem_write_enable) begin 
                 case (lsu_state)
                     IDLE: begin
-                        ///?????判断
-                        lsu_state <= REQUESTING;
+                        if (core_state == 3'b011) begin 
+                            lsu_state <= REQUESTING;
+                        end
                     end
                     REQUESTING: begin 
                         mem_write_valid <= 1;
@@ -82,8 +87,9 @@ module lsu (
                         end
                     end
                     DONE: begin 
-                        ///??????判断
-                        lsu_state <= IDLE;
+                        if (core_state == 3'b110) begin 
+                            lsu_state <= IDLE;
+                        end
                     end
                 endcase
             end

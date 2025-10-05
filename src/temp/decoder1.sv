@@ -10,7 +10,7 @@ module decoder #(
     input  wire reset,
 
     // 来自fetcher的接口
-    input  wire         fetcher_valid,         // 取指完成信号
+    input reg [2:0] core_state,          // 核心状态
     input  wire [INSTR_WIDTH-1:0] instruction, // 取出的指令
 
     // 反馈给WarpScheduler的接口
@@ -88,6 +88,7 @@ module decoder #(
             reg_rd_addr       <= 0;
             reg_rs_addr       <= 0;
             reg_rt_addr       <= 0;
+            reg_write_enable
             alu_op            <= 0;
             alu_cmp_mode      <= 0;
             lsu_valid         <= 0;
@@ -107,7 +108,7 @@ module decoder #(
             lsu_valid         <= 0;
             pc_valid          <= 0;
 
-            if (fetcher_valid) begin
+            if (core_state == 3'b010) begin// DECODE状态下进行译码
 
                 reg_rd_addr <= instruction[11:8];
                 reg_rs_addr <= instruction[7:4];

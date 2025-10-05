@@ -20,7 +20,6 @@ module WarpScheduler #(
     input  wire [ThreadNum-1:0] warp_cmd_mask,  // Warp线程掩码
     
     // Warp控制接口 - 输入
-
     input  wire warp_ctl_valid,     // Warp控制有效信号
     output wire warp_ctl_ready,     // Warp控制就绪信号
     input  wire [$clog2(WarpNum)-1:0] warp_ctl_wid,  // Warp ID
@@ -42,26 +41,44 @@ module WarpScheduler #(
     output wire warp_pop_ready,                      // Warp栈弹出就绪信号
     input  wire [$clog2(WarpNum)-1:0] warp_pop_wid,  // Warp栈弹出Warp ID
 
-    
     // 指令获取接口 - 输出
     output wire inst_fetch_valid,   // 指令获取有效信号
     input  wire inst_fetch_ready,   // 指令获取就绪信号
     output wire [AddrWidth-1:0] inst_fetch_pc,  // 指令地址
     output wire [ThreadNum-1:0] inst_fetch_mask,// 线程掩码
     output wire [$clog2(WarpNum)-1:0] inst_fetch_wid,  // Warp ID
+
+    // Core状态控制信号 - 新增
+    input  wire [2:0] fetcher_state,
+    input  wire [1:0] lsu_state [ThreadNum-1:0],
+    output reg [2:0] core_state_out,  // 当前核心状态输出
+
     
     //////////////////////////////////////////////////////////////
+    //调试输出
     output reg [(WarpNum)-1:0] idle_id_out,
     output reg [(WarpNum)-1:0] active_id_out,
     output wire [AddrWidth + ThreadNum - 1:0] pop_data_out
     //////////////////////////////////////////////////////////////
 );
 
+    // ==================== 状态定义 ====================
+    localparam IDLE = 3'b000,    // 等待开始
+        FETCH = 3'b001,          // 从程序存储器获取指令
+        DECODE = 3'b010,         // 将指令解码为控制信号
+        REQUEST = 3'b011,        // 从寄存器或内存请求数据
+        WAIT = 3'b100,           // 等待内存响应（如果需要）
+        EXECUTE = 3'b101,        // 执行ALU和PC计算
+        UPDATE = 3'b110,         // 更新寄存器、NZP和PC
+        DONE = 3'b111;           // 执行完成
+
     // ==================== 内部寄存器定义 ====================
     reg [WarpNum-1:0] warp_idle;        // Warp空闲状态 (1=空闲, 0=已分配)
     reg [WarpNum-1:0] warp_active;      // Warp活跃状态 (1=活跃, 0=非活跃)
     reg [AddrWidth-1:0] warp_pc [0:WarpNum-1];         // 每个Warp的程序计数器
     reg [ThreadNum-1:0] warp_tmask [0:WarpNum-1];      // 每个Warp的线程掩码
+    reg [2:0] core_state;               // 统一的核心状态机状态
+    reg [$clog2(WarpNum)-1:0] current_warp_id; // 当前正在处理的Warp ID
 
     // ==================== 内部连线定义 ====================
     wire has_idle;                      // 是否存在空闲Warp
@@ -96,7 +113,6 @@ module WarpScheduler #(
     
     // SIMT栈输出信号
     wire [AddrWidth + ThreadNum - 1:0] simt_stack_out_data [0:WarpNum-1];
-    wire [$clog2(8):0] simt_stack_sp_out [0:WarpNum-1]; // 添加栈指针输出数组
 
    
     // ==================== 优先级编码器 ====================
@@ -122,6 +138,8 @@ module WarpScheduler #(
     assign active_id_out = warp_active;
     assign idle_id_out = warp_idle;
     assign pop_data_out = simt_stack_out_data[warp_pop_wid];
+    assign core_state_out = core_state;
+    assign current_warp_id = active_id; // 当前处理的Warp ID为第一个活跃Warp的ID
 
     // 查找是否有空闲Warp
     assign has_idle = |warp_idle;
@@ -145,12 +163,13 @@ module WarpScheduler #(
     
     // ==================== 时序逻辑 ====================
     always @(posedge clk or posedge reset) begin
-        integer w, t;
+        integer w;
         if (reset) begin
             // 复位初始�?
             warp_idle <= {WarpNum{1'b1}};      // �?有Warp初始为空�?
             warp_active <= {WarpNum{1'b0}};    // �?有Warp初始为非活跃
-            
+            core_state <= IDLE;
+            active_id = {$clog2(WarpNum){1'b0}};
             // 初始化每个Warp的PC和线程掩�?
             for (w = 0; w < WarpNum; w = w + 1) begin
                 warp_pc[w] <= {AddrWidth{1'b0}};
@@ -158,6 +177,65 @@ module WarpScheduler #(
             end
             
         end else begin
+
+            // 统一核心状态机
+            case (core_state)
+                IDLE: begin
+                    if (has_active) begin
+                        // 选择第一个活跃的Warp开始处理
+                        current_warp_id <= active_id;
+                        core_state <= FETCH;
+                    end
+                end
+                
+                FETCH: begin 
+                    if (fetcher_state == 2'b11) begin// FETCH_DONE 
+                        core_state <= DECODE;
+                    end
+                end
+                
+                DECODE: begin
+                    core_state <= REQUEST;
+                end
+                
+                REQUEST: begin 
+                    core_state <= WAIT;
+                end
+                
+                WAIT: begin
+                    // 等待所有LSU完成请求
+                    reg any_lsu_waiting = 1'b0;
+                    for (int i = 0; i < ThreadNum; i++) begin
+                        if (lsu_state[i] == 2'b01 || lsu_state[i] == 2'b10) begin// REQUESTING or WAITING
+                            any_lsu_waiting = 1'b1;
+                            break;
+                        end
+                    end
+
+                    if (!any_lsu_waiting) begin
+                        core_state <= EXECUTE;
+                    end
+                end
+                
+                EXECUTE: begin
+                    core_state <= UPDATE;
+                end
+                
+                UPDATE: begin 
+                    if (end_ctl_valid) begin 
+                        // 当前Warp执行完成
+                        core_state <= DONE;
+                    end else begin 
+                        core_state <= FETCH;
+                    end
+                end
+                
+                DONE: begin 
+                    // 执行完成，标记当前Warp为非活跃
+                    warp_active[current_warp_id] <= 1'b0;
+                    core_state <= IDLE;
+                end
+            endcase
             
             // Warp命令处理：分配新Warp
             if (warp_cmd_valid && warp_cmd_ready) begin

@@ -12,6 +12,8 @@ module registers #(
     input  wire reset,
     input  wire enable, // 当前线程是否有效
 
+    input reg [2:0] core_state,
+
     // Decoder/PC接口
     input  wire [3:0] reg_rd_address,
     input  wire [3:0] reg_rs_address,
@@ -53,18 +55,21 @@ module registers #(
             registers[14] <= THREADS_PER_BLOCK;  // %blockDim
             registers[15] <= THREAD_ID;          // %threadIdx
         end else if (enable) begin
-            // 读操作???判断是哪个操作？？
-            rs <= registers[reg_rs_address];
-            rt <= registers[reg_rt_address];
+            if(core_state == 3'b011)begin//core_state == REQUEST
 
+                rs <= registers[reg_rs_address];
+                rt <= registers[reg_rt_address];
+            end
             // 写操作（通常在执行阶段）
-            if (reg_write_enable && reg_rd_address < 13) begin
-                case (reg_input_mux)
-                    2'b00: registers[reg_rd_address] <= alu_out;         // ALU结果
-                    2'b01: registers[reg_rd_address] <= lsu_out;         // LSU结果
-                    2'b10: registers[reg_rd_address] <= reg_immediate; // 立即数
-                    default: ; // 保持不变
-                endcase
+            if (core_state == 3'b110) begin //core_state == UPDATE
+                if (reg_write_enable && reg_rd_address < 13) begin
+                    case (reg_input_mux)
+                        2'b00: registers[reg_rd_address] <= alu_out;         // ALU结果
+                        2'b01: registers[reg_rd_address] <= lsu_out;         // LSU结果
+                        2'b10: registers[reg_rd_address] <= reg_immediate; // 立即数
+                        default: ; // 保持不变
+                    endcase
+                end
             end
         end
     end

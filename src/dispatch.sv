@@ -2,9 +2,9 @@
 `timescale 1ns/1ns
 
 // BLOCK DISPATCH
-// > The GPU has one dispatch unit at the top level
-// > Manages processing of threads and marks kernel execution as done
-// > Sends off batches of threads in blocks to be executed by available compute cores
+// > 顶层只有一个分派单元
+// > 负责管理线程的处理并标记内核执行完成
+// > 将线程批量以block为单位分派给可用的计算核心执行
 module dispatch #(
     parameter NUM_CORES = 2,
     parameter THREADS_PER_BLOCK = 4
@@ -26,14 +26,14 @@ module dispatch #(
     // Kernel Execution
     output reg done
 );
-    // Calculate the total number of blocks based on total threads & threads per block
+    // 根据总线程数和每个block的线程数计算总block数
     wire [7:0] total_blocks;
     assign total_blocks = (thread_count + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
-    // Keep track of how many blocks have been processed
-    reg [7:0] blocks_dispatched; // How many blocks have been sent to cores?
-    reg [7:0] blocks_done; // How many blocks have finished processing?
-    reg start_execution; // EDA: Unimportant hack used because of EDA tooling
+    // 跟踪已分派和已完成的block数量
+    reg [7:0] blocks_dispatched; // 已分派给核心的block数量
+    reg [7:0] blocks_done; // 已完成处理的block数量
+    reg start_execution; // EDA: 由于EDA工具原因的无关hack
 
     always @(posedge clk) begin
         if (reset) begin
@@ -49,7 +49,7 @@ module dispatch #(
                 core_thread_count[i] <= THREADS_PER_BLOCK;
             end
         end else if (start) begin    
-            // EDA: Indirect way to get @(posedge start) without driving from 2 different clocks
+            // EDA: 间接实现@(posedge start)，避免由两个不同时钟驱动
             if (!start_execution) begin 
                 start_execution <= 1;
                 for (int i = 0; i < NUM_CORES; i++) begin
@@ -57,7 +57,7 @@ module dispatch #(
                 end
             end
 
-            // If the last block has finished processing, mark this kernel as done executing
+            // 如果最后一个block已处理完成，标记该内核执行已完成
             if (blocks_done == total_blocks) begin 
                 done <= 1;
             end
@@ -66,7 +66,7 @@ module dispatch #(
                 if (core_reset[i]) begin 
                     core_reset[i] <= 0;
 
-                    // If this core was just reset, check if there are more blocks to be dispatched
+                    // 如果该核心刚刚被复位，检查是否还有block需要分派
                     if (blocks_dispatched < total_blocks) begin 
                         core_start[i] <= 1;
                         core_block_id[i] <= blocks_dispatched;
@@ -81,7 +81,7 @@ module dispatch #(
 
             for (int i = 0; i < NUM_CORES; i++) begin
                 if (core_start[i] && core_done[i]) begin
-                    // If a core just finished executing it's current block, reset it
+                    // 如果某个核心刚完成当前block的执行，则复位该核心
                     core_reset[i] <= 1;
                     core_start[i] <= 0;
                     blocks_done = blocks_done + 1;
