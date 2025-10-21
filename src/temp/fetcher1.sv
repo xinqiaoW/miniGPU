@@ -16,6 +16,7 @@ module fetcher #(
     input  wire        inst_fetch_valid,         // WarpScheduler请求取指
     input  wire [PROGRAM_MEM_ADDR_BITS-1:0] inst_fetch_pc, // WarpScheduler给出的指令地址
     input  wire [ThreadNum-1:0] inst_fetch_mask, // 线程掩码
+    input  wire [$clog2(WarpNum)-1:0] warp_wid,  // Warp ID
     
     output reg         inst_fetch_ready,         // Fetcher准备好接收新请求
 
