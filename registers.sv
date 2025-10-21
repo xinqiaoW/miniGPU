@@ -26,7 +26,9 @@
 // > Each thread within each core has it's own register file with 13 free registers and 3 read-only registers
 // > Read-only registers hold the familiar %blockIdx, %blockDim, and %threadIdx values critical to SIMD
 module registers #(
-    parameter THREADS_PER_BLOCK = 4,
+    parameter THREADS_PER_WARP = 4,
+    parameter WARP_NUM = 8,
+    parameter WARP_ID = 0,
     parameter THREAD_ID = 0,
     parameter DATA_BITS = 8
 ) (
@@ -34,7 +36,7 @@ module registers #(
     input wire reset,
     input wire enable, // If current block has less threads then block size, some registers will be inactive
 
-
+    input wire [$clog2(WARP_NUM)- 1:0] warp_id,
     // State
     input reg [2:0] group_state,
 
@@ -69,33 +71,35 @@ module registers #(
             rs <= 0;
             rt <= 0;
             // Initialize all free registers
-            registers[0] <= 8'b0;
-            registers[1] <= 8'b0;
-            registers[2] <= 8'b0;
-            registers[3] <= 8'b0;
-            registers[4] <= 8'b0;
-            registers[5] <= 8'b0;
-            registers[6] <= 8'b0;
-            registers[7] <= 8'b0;
-            registers[8] <= 8'b0;
-            registers[9] <= 8'b0;
-            registers[10] <= 8'b0;
-            registers[11] <= 8'b0;
-            registers[12] <= 8'b0;
-            // Initialize read-only registers
-            registers[13] <= 8'b0;              // %blockIdx
-            registers[14] <= THREADS_PER_BLOCK; // %blockDim
-            registers[15] <= THREAD_ID;         // %threadIdx
-        end else if (enable) begin 
+            for(integer i = 0 ; i < WARP_NUM; i = i + 1)begin
+                registers[0] <= 8'b0;
+                registers[1] <= 8'b0;
+                registers[2] <= 8'b0;
+                registers[3] <= 8'b0;
+                registers[4] <= 8'b0;
+                registers[5] <= 8'b0;
+                registers[6] <= 8'b0;
+                registers[7] <= 8'b0;
+                registers[8] <= 8'b0;
+                registers[9] <= 8'b0;
+                registers[10] <= 8'b0;
+                registers[11] <= 8'b0;
+                registers[12] <= 8'b0;
+                // Initialize read-only registers
+                registers[13] <= 8'b0;              // %WarpID
+                registers[14] <= THREADS_PER_WARP; // %blockDim
+                registers[15] <= THREAD_ID;         // %threadIdx
+            end
+        end else if (enable & (warp_id === WARP_ID)) begin 
             
-            // Fill rs/rt when core_state = REQUEST
-            if (group_state == 3'b011) begin 
+            // Fill rs/rt when group_state = LOAD
+            if (group_state == 2'b01) begin 
                 rs <= registers[decoded_rs_address];
                 rt <= registers[decoded_rt_address];
             end
 
-            // Store rd when core_state = UPDATE
-            if (group_state == 3'b110) begin 
+            // Store rd when group_state = DONE
+            if (group_state == 2'b11) begin 
                 // Only allow writing to R0 - R12
                 if (decoded_reg_write_enable && decoded_rd_address < 13) begin
                     case (decoded_reg_input_mux)
@@ -110,6 +114,10 @@ module registers #(
                         CONSTANT: begin 
                             // CONST
                             registers[decoded_rd_address] <= decoded_immediate;
+                        end
+                        default: begin
+                            // default
+                            // do nothing
                         end
                     endcase
                 end

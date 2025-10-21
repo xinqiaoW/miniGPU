@@ -8,10 +8,10 @@
 module lsu (
     input wire clk,
     input wire reset,
-    input wire enable, // If current block has less threads then block size, some LSUs will be inactive
+    input wire enable, 
 
     // State
-    input reg [2:0] core_state,
+    input reg [2:0] group_state,
 
     // Memory Control Sgiansl
     input reg decoded_mem_read_enable,
@@ -51,8 +51,8 @@ module lsu (
             if (decoded_mem_read_enable) begin 
                 case (lsu_state)
                     IDLE: begin
-                        // Only read when core_state = REQUEST
-                        if (core_state == 3'b011) begin 
+                        // Only read when group_state = EXECUTE
+                        if (group_state == 2'b10) begin 
                             lsu_state <= REQUESTING;
                         end
                     end
@@ -69,8 +69,8 @@ module lsu (
                         end
                     end
                     DONE: begin 
-                        // Reset when core_state = UPDATE
-                        if (core_state == 3'b110) begin 
+                        // Reset when group_state = DONE
+                        if (group_state == 2'b11) begin 
                             lsu_state <= IDLE;
                         end
                     end
@@ -81,8 +81,8 @@ module lsu (
             if (decoded_mem_write_enable) begin 
                 case (lsu_state)
                     IDLE: begin
-                        // Only read when core_state = REQUEST
-                        if (core_state == 3'b011) begin 
+                        // Only read when group_state = EXECUTE
+                        if (group_state == 2'b10) begin 
                             lsu_state <= REQUESTING;
                         end
                     end
@@ -99,8 +99,8 @@ module lsu (
                         end
                     end
                     DONE: begin 
-                        // Reset when core_state = UPDATE
-                        if (core_state == 3'b110) begin 
+                        // Reset when group_state = DONE
+                        if (group_state == 2'b11) begin 
                             lsu_state <= IDLE;
                         end
                     end
