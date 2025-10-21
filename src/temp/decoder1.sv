@@ -80,7 +80,7 @@ module decoder #(
             warp_ctl_valid    <= 0;
             warp_ctl_wid      <= 0;
             warp_ctl_active   <= 0;
-            warp_ctl_join     <= 0;
+
             end_ctl_valid     <= 0;
             end_ctl_wid       <= 0;
             // 执行单元接口
@@ -88,7 +88,7 @@ module decoder #(
             reg_rd_addr       <= 0;
             reg_rs_addr       <= 0;
             reg_rt_addr       <= 0;
-            reg_write_enable
+            reg_write_enable  <= 0;
             alu_op            <= 0;
             alu_cmp_mode      <= 0;
             lsu_valid         <= 0;

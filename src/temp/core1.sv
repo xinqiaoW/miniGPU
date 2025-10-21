@@ -46,6 +46,121 @@ module core #(
         EXECUTE = 3'b101,        // 执行ALU和PC计算
         UPDATE = 3'b110,         // 更新寄存器、NZP和PC
         DONE = 3'b111;           // 执行完成
+    
+
+
+
+    // FETCH -> DECODE 阶段数据
+    typedef struct packed {
+        logic [31:0] instruction;
+        logic [31:0] thread_mask;
+        logic [$clog2(WarpNum)-1:0] warp_id;
+    } fetch_decode_data_t;
+
+    // DECODE -> EXECUTE 阶段数据  
+    typedef struct packed {
+        
+        // ... 其他控制信号
+    } decode_execute_data_t;
+
+    // EXECUTE -> WRITEBACK 阶段数据
+    typedef struct packed {
+        
+    } execute_writeback_data_t;
+
+    // 在core1.sv的模块实例化部分添加：
+
+    // FETCH -> DECODE 缓冲
+    fetch_decode_data_t fd_data_in, fd_data_out;
+    wire fd_valid;
+    wire fd_ready = 1'b1; // 简化实现，实际可能需要根据下游模块状态确定
+    
+    stage_buffer #(
+        .DATA_WIDTH($bits(fetch_decode_data_t)),
+        .STAGE_NAME("FETCH_DECODE")
+    ) fetch_decode_buffer (
+        .clk(clk),
+        .reset(reset),
+        .enable(fd_enable),           // 使用控制逻辑生成的使能
+        .flush(pipeline_flush),       // 使用控制逻辑生成的刷新
+        .data_in(fd_data_in),
+        .data_out(fd_data_out),
+        .valid_out(fd_valid)
+    );
+
+    // DECODE -> EXECUTE 缓冲
+    decode_execute_data_t de_data_in, de_data_out;
+    wire de_valid;
+    wire de_ready = 1'b1; // 简化实现，实际可能需要根据下游模块状态确定
+    
+    stage_buffer #(
+        .DATA_WIDTH($bits(decode_execute_data_t)),
+        .STAGE_NAME("DECODE_EXECUTE") 
+    ) decode_execute_buffer (
+        .clk(clk),
+        .reset(reset),
+        .enable(de_enable), // 使用控制逻辑生成的使能
+        .flush(branch_mispredict),
+        .data_in(de_data_in),
+        .data_out(de_data_out),
+        .valid_out(de_valid)
+    );
+
+    // EXECUTE -> WRITEBACK 缓冲
+    execute_writeback_data_t ew_data_in, ew_data_out;
+    wire ew_valid;
+    wire ew_ready = 1'b1; // 简化实现，实际可能需要根据下游模块状态确定
+    
+    stage_buffer #(
+        .DATA_WIDTH($bits(execute_writeback_data_t)),
+        .STAGE_NAME("EXECUTE_WRITEBACK")
+    ) execute_writeback_buffer (
+        .clk(clk),
+        .reset(reset),
+        .enable(ew_enable), // 使用控制逻辑生成的使能
+        .flush(1'b0),       // 执行阶段通常不需要刷新
+        .data_in(ew_data_in),
+        .data_out(ew_data_out),
+        .valid_out(ew_valid)
+    );
+
+    // ==================== 流水线控制逻辑 ====================
+
+    // 1. 数据相关性检测 - 检测RAW（Read After Write）冒险
+    wire data_hazard_rs = (de_data_out.reg_rs_addr == ew_data_out.reg_rd_addr) && 
+                        ew_data_out.reg_write_enable && de_valid;
+    wire data_hazard_rt = (de_data_out.reg_rt_addr == ew_data_out.reg_rd_addr) && 
+                        ew_data_out.reg_write_enable && de_valid;
+    wire data_hazard = data_hazard_rs || data_hazard_rt;
+
+    // 2. 结构冲突检测
+    // 简化实现，假设LSU始终空闲
+    wire lsu_busy = 1'b0;
+    wire structural_hazard = lsu_busy && de_data_out.lsu_mem_read_enable;
+
+    // 3. 控制冒险（分支预测失败）
+    // 简化实现，假设分支预测总是不发生（实际应根据分支预测逻辑确定）
+    wire branch_taken = 1'b0;
+    wire [AddrWidth-1:0] predicted_pc = 0;
+    wire [AddrWidth-1:0] actual_branch_target = 0;
+    wire branch_mispredict = branch_taken && (predicted_pc != actual_branch_target);
+
+    // 4. 综合流水线stall信号
+    wire pipeline_stall = data_hazard || structural_hazard;
+
+    // 5. 修改缓冲寄存器使能信号
+    wire fd_enable = (core_state == FETCH) && !pipeline_stall && fd_ready;
+    wire de_enable = (core_state == DECODE) && !pipeline_stall && de_ready;
+    wire ew_enable = (core_state == EXECUTE) && !pipeline_stall && ew_ready;
+
+    // 6. 流水线刷新信号
+    wire pipeline_flush = branch_mispredict;
+
+    // ==================== 连接到缓冲寄存器 ====================
+
+    // 已在实例化时设置了缓冲寄存器的使能信号和刷新信号
+
+
 
     // WarpScheduler接口信号
     wire warp_cmd_valid, warp_cmd_ready;
@@ -66,9 +181,8 @@ module core #(
     wire warp_pop_valid, warp_pop_ready;
     wire [$clog2(WarpNum)-1:0] warp_pop_wid;
 
-    wire fetcher_state;
-    wire lsu_state [ThreadNum-1:0];
-
+    wire [2:0] fetcher_state;
+    wire [ThreadNum-1:0] lsu_state;
 
     
     // Fetcher接口信号
@@ -116,7 +230,7 @@ module core #(
         .inst_fetch_ready(inst_fetch_ready),
         .inst_fetch_pc  (inst_fetch_pc),
         .inst_fetch_mask(inst_fetch_mask),
-        .inst_fetch_wid (inst_fetch_wid)
+        .inst_fetch_wid (inst_fetch_wid),
 
         .fetcher_state  (fetcher_state),
         .lsu_state      (lsu_state),
@@ -124,8 +238,7 @@ module core #(
 
         .idle_id_out    (), // 未使用
         .pop_data_out   (), // 未使用
-        .active_id_out  (), // 未使用
-
+        .active_id_out  () // 未使用
     );
 
     // ==================== Fetcher实例化 ====================
@@ -138,12 +251,17 @@ module core #(
         .core_state     (core_state),
         .inst_fetch_valid(inst_fetch_valid),
         .inst_fetch_pc  (inst_fetch_pc),
+        .inst_fetch_mask(inst_fetch_mask),
+        .inst_fetch_wid (inst_fetch_wid),
         .inst_fetch_ready(inst_fetch_ready),
         .mem_read_valid (prog_mem_read_valid),
         .mem_read_address(prog_mem_read_addr),
         .mem_read_ready (prog_mem_read_ready),
         .mem_read_data  (prog_mem_read_data),
-        .instruction    (instruction)
+        .instruction    (fd_data_in.instruction),
+        .mask           (fd_data_in.thread_mask),
+        .warp_wid       (fd_data_in.warp_id)
+        
     );
 
     // Decoder接口信号

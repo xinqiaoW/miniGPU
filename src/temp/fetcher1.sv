@@ -15,6 +15,8 @@ module fetcher #(
     // WarpScheduler接口
     input  wire        inst_fetch_valid,         // WarpScheduler请求取指
     input  wire [PROGRAM_MEM_ADDR_BITS-1:0] inst_fetch_pc, // WarpScheduler给出的指令地址
+    input  wire [ThreadNum-1:0] inst_fetch_mask, // 线程掩码
+    
     output reg         inst_fetch_ready,         // Fetcher准备好接收新请求
 
     // 程序存储器接口
@@ -26,8 +28,10 @@ module fetcher #(
     // 输出
     output reg [2:0] fetcher_state,
     output reg [PROGRAM_MEM_DATA_BITS-1:0] instruction // 取出的指令
+    output wire [ThreadNum-1:0] mask,// 线程掩码
+    output wire [$clog2(WarpNum)-1:0] warp_wid,  // Warp ID
 );
-
+    
     localparam 
         IDLE = 2'b00, 
         FETCHING = 2'b01, 
