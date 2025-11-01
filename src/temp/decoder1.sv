@@ -9,9 +9,11 @@ module decoder #(
     input  wire clk,
     input  wire reset,
 
-    // 来自fetcher的接口
-    input reg [2:0] core_state,          // 核心状态
+    //输入握手
+    input  wire dc_in_valid,
+    output wire dc_in_ready,
     input  wire [INSTR_WIDTH-1:0] instruction, // 取出的指令
+
 
     // 反馈给WarpScheduler的接口
     output reg          branch_ctl_valid,      // 分支控制有效
@@ -51,6 +53,11 @@ module decoder #(
     output reg  [7:0]   reg_immediate,
     output reg  [1:0]   reg_input_mux,
     output reg          reg_write_enable
+
+
+    //输出握手
+    input  wire dc_out_valid,
+    output wire dc_out_ready
 );
     
 

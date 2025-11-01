@@ -10,14 +10,11 @@ module fetcher #(
     input  wire clk,
     input  wire reset,
 
-    input reg [2:0] core_state,
-
     // WarpScheduler接口
     input  wire        inst_fetch_valid,         // WarpScheduler请求取指
     input  wire [PROGRAM_MEM_ADDR_BITS-1:0] inst_fetch_pc, // WarpScheduler给出的指令地址
     input  wire [ThreadNum-1:0] inst_fetch_mask, // 线程掩码
     input  wire [$clog2(WarpNum)-1:0] warp_wid,  // Warp ID
-    
     output reg         inst_fetch_ready,         // Fetcher准备好接收新请求
 
     // 程序存储器接口
@@ -27,10 +24,15 @@ module fetcher #(
     input  wire [PROGRAM_MEM_DATA_BITS-1:0] mem_read_data,   // 读回的指令
 
     // 输出
-    output reg [2:0] fetcher_state,
+    output reg [2:0] fetcher_state,//改成内部信号
     output reg [PROGRAM_MEM_DATA_BITS-1:0] instruction // 取出的指令
     output wire [ThreadNum-1:0] mask,// 线程掩码
     output wire [$clog2(WarpNum)-1:0] warp_wid,  // Warp ID
+
+    //输出握手信号
+    output reg fc_out_valid,
+    input  wire fc_out_ready
+
 );
     
     localparam 
@@ -51,7 +53,8 @@ module fetcher #(
             case (fetcher_state)
                 IDLE: begin
                     inst_fetch_ready = 1; // 可以接收WarpScheduler请求
-                    if (inst_fetch_valid && core_state == 3'b001) begin// core_state == FETCH
+                    fc_out_valid <= 0;
+                    if (inst_fetch_valid && inst_fetch_ready) begin
                         fetcher_state <= FETCHING;
                         mem_read_valid <= 1;
                         mem_read_address <= inst_fetch_pc;
@@ -59,14 +62,14 @@ module fetcher #(
                 end
                 FETCHING: begin
                     if (mem_read_ready) begin
-                        fetcher_state <= FETCHED;
                         instruction <= mem_read_data; // Store the instruction when received
                         mem_read_valid <= 0;
+                        fc_out_valid <= 1;
                     end
+
                 end
                 FETCHED: begin
-                    if (core_state == 3'b010) begin // core_state == DECODE
-                        inst_fetch_ready = 1; // 可以接收下一个请求
+                    if(fc_out_ready && fc_out_valid) begin
                         fetcher_state <= IDLE;
                     end
                 end
